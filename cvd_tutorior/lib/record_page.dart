@@ -6,7 +6,7 @@ class RecordPage extends StatefulWidget {
   _RecordPageState createState() => _RecordPageState();
 }
 
-class _RecordPageState extends State<RecordPage> {//record브랜치 오 여기서도 커밋이 되네?
+class _RecordPageState extends State<RecordPage> {//record브랜치 오 여기서도 커밋이 되네? 이제 진짜 recorder 브랜치
   FlutterSoundRecorder soundRecorder = new FlutterSoundRecorder();
   FlutterSoundPlayer soundPlayer = new FlutterSoundPlayer();
 
