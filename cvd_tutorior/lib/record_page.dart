@@ -6,7 +6,7 @@ class RecordPage extends StatefulWidget {
   _RecordPageState createState() => _RecordPageState();
 }
 
-class _RecordPageState extends State<RecordPage> {
+class _RecordPageState extends State<RecordPage> {//record브랜치
   FlutterSoundRecorder soundRecorder = new FlutterSoundRecorder();
   FlutterSoundPlayer soundPlayer = new FlutterSoundPlayer();
 
