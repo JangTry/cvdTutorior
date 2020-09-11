@@ -13,14 +13,13 @@ class RecordPage extends StatefulWidget {
 }
 
 class _RecordPageState extends State<RecordPage> {
-  //record브랜치 오 여기서도 커밋이 되네? 이제 진짜 recorder 브랜치
 
   FlutterAudioRecorder _recorder;
   AudioPlayer player = AudioPlayer();
   AudioPlayerState playerState = AudioPlayerState.STOPPED;
   Recording _recording;
   Timer _t;
-  IconData _buttonIcon = Icons.do_not_disturb_on;
+  IconData _buttonIcon = Icons.more_horiz;
   String _alert;
 
   bool _isAnswer = true;
@@ -30,7 +29,7 @@ class _RecordPageState extends State<RecordPage> {
   @override
   void initState() {
     super.initState();
-    Future.microtask(() {
+    Future.microtask(() { //제스터 디텍터같은 이벤트큐 생성되기 이전에 준비작업.
       _prepare();
     });
   }
@@ -51,8 +50,10 @@ class _RecordPageState extends State<RecordPage> {
       case RecordingStatus.Stopped:
         {
           if (player.state == AudioPlayerState.PLAYING) {
+            playerState = AudioPlayerState.STOPPED;
             await player.stop();
           } else {
+            playerState = AudioPlayerState.PLAYING;
             await _play();
 
           }
@@ -88,7 +89,7 @@ class _RecordPageState extends State<RecordPage> {
     // AudioFormat is optional, if given value, will overwrite path extension when there is conflicts.
 
     _recorder = FlutterAudioRecorder(customPath,
-        audioFormat: AudioFormat.WAV, sampleRate: 22050);
+        audioFormat: AudioFormat.WAV, sampleRate: 8000);
     await _recorder.initialized;
   }
 
@@ -107,6 +108,15 @@ class _RecordPageState extends State<RecordPage> {
         _alert = "Permission Required.";
       });
     }
+
+    player.onPlayerCompletion.listen((event) {
+      setState(() {
+         playerState = player.state;
+         _buttonIcon = _playerIcon(_recording.status, playerState);
+      });
+    });
+
+
   }
 
   Future _startRecording() async {
@@ -135,15 +145,8 @@ class _RecordPageState extends State<RecordPage> {
   }
 
   void _play() {
-//    var result = player.play(_recording.path, isLocal: true);
-    var result = player.play("https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3", isLocal: false);
-    if(result == 1 ) {
-      setState(() {
-        playerState = AudioPlayerState.PLAYING;
-        print('${player
-            .state} 여기야!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!');
-      });
-    }
+    var result = player.play(_recording.path, isLocal: true);
+//    var result = player.play("https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3", isLocal: false);
   }
 
   IconData _playerIcon(RecordingStatus recordStatus, AudioPlayerState playerState) {
@@ -166,7 +169,6 @@ class _RecordPageState extends State<RecordPage> {
   }
 
   IconData checkPlayerState(AudioPlayerState playerState) {
-    print("HI!!!!!!!!!!!!!!!!!!!");
     if (playerState == AudioPlayerState.PLAYING) {
       print("재생중니ㅣ까 멈춰로 바꿔주자ㅓ");
       return Icons.stop;
@@ -175,6 +177,8 @@ class _RecordPageState extends State<RecordPage> {
       return Icons.play_arrow;
     }
   }
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -408,18 +412,17 @@ class _RecordPageState extends State<RecordPage> {
               child: FittedBox(
                   fit: BoxFit.scaleDown,
                   child: Text(
-                    '${_recording?.duration.toString().substring(2, 7) ?? " "}',
+                    _recording == null  ?"...": '${_recording.duration.toString().substring(2,7)}',
                     style: TextStyle(color: Colors.grey.withOpacity(0.5),fontSize: 50),
                   )),
             ),
             SizedBox(
               height: 40,
             ),
-            ((_isAnswer && _recording.status == RecordingStatus.Stopped) ||
+            ((_isAnswer && _recording?.status == RecordingStatus.Stopped) ||
                     (!_isAnswer && !_isFreeEmpty))
                 ? GestureDetector(
                     onTap: () {
-//                      _buttonIcon = _playerIcon();
                       setState(() {
                         _prepare();
                       });
