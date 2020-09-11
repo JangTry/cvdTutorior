@@ -20,11 +20,11 @@ class _RecordPageState extends State<RecordPage> {
   Recording _recording;
   Timer _t;
   IconData _buttonIcon = Icons.more_horiz;
-  String _alert;
 
   bool _isAnswer = true;
   bool _isAnswerEmpty = true;
   bool _isFreeEmpty = true;
+
 
   @override
   void initState() {
@@ -53,9 +53,7 @@ class _RecordPageState extends State<RecordPage> {
             playerState = AudioPlayerState.STOPPED;
             await player.stop();
           } else {
-            playerState = AudioPlayerState.PLAYING;
             await _play();
-
           }
           break;
         }
@@ -70,7 +68,7 @@ class _RecordPageState extends State<RecordPage> {
     });
   }
 
-  Future _init() async {
+  Future _init() async { //경로설정, 레코더 생성
     String customPath = '/flutter_audio_recorder_';
     io.Directory appDocDirectory;
     if (io.Platform.isIOS) {
@@ -101,11 +99,11 @@ class _RecordPageState extends State<RecordPage> {
       setState(() {
         _recording = result;
         _buttonIcon = _playerIcon(_recording.status,playerState);
-        _alert = "";
+//        _alert = "";
       });
     } else {
       setState(() {
-        _alert = "Permission Required.";
+//        _alert = "Permission Required.";
       });
     }
 
@@ -116,7 +114,12 @@ class _RecordPageState extends State<RecordPage> {
       });
     });
 
-
+    player.onPlayerStateChanged.listen((event) {
+      setState(() {
+        playerState = player.state;
+        _buttonIcon = _playerIcon(_recording.status, playerState);
+      });
+    });
   }
 
   Future _startRecording() async {
@@ -149,7 +152,8 @@ class _RecordPageState extends State<RecordPage> {
 //    var result = player.play("https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3", isLocal: false);
   }
 
-  IconData _playerIcon(RecordingStatus recordStatus, AudioPlayerState playerState) {
+
+  IconData _playerIcon(RecordingStatus recordStatus, AudioPlayerState playerState) { // 녹음상태와 재생상태를 확인해 적절한 아이콘데이터를 리턴
     switch (recordStatus) {
       case RecordingStatus.Initialized:
         {
@@ -170,10 +174,8 @@ class _RecordPageState extends State<RecordPage> {
 
   IconData checkPlayerState(AudioPlayerState playerState) {
     if (playerState == AudioPlayerState.PLAYING) {
-      print("재생중니ㅣ까 멈춰로 바꿔주자ㅓ");
       return Icons.stop;
     }else {
-      print("조까!!!!!!!!!");
       return Icons.play_arrow;
     }
   }
@@ -182,308 +184,306 @@ class _RecordPageState extends State<RecordPage> {
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      child: Container(
-        padding: EdgeInsets.all(30),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              children: [
-                GestureDetector(
-                  behavior: HitTestBehavior.translucent,
-                  child: Container(
-                    child: Icon(Icons.arrow_back_ios),
+    return SingleChildScrollView(
+      child: SafeArea(
+        child: Container(
+          padding: EdgeInsets.all(30),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  GestureDetector(
+                    behavior: HitTestBehavior.translucent,
+                    child: Container(
+                      child: Icon(Icons.arrow_back_ios),
+                    ),
                   ),
-                ),
-                Expanded(
-                  child: Container(),
-                )
-              ],
-            ),
-            SizedBox(height: 30),
-            Row(
-              children: [
-                Expanded(
-                  child: Container(),
-                ),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    MaterialButton(
-                      onPressed: () {
-                        setState(() {
-                          _isAnswer = true;
-                        });
-                      },
-                      color: _isAnswer ? Color(0xff878e9f) : Color(0xffe3e6ee),
-                      shape: CircleBorder(),
-                      elevation: 0,
-                      child: Container(
-                        height: 60,
-                        width: 60,
-                        padding: EdgeInsets.all(15),
-                        decoration:
-                            BoxDecoration(shape: BoxShape.circle, boxShadow: [
-                          BoxShadow(
-                            color: Color(0x0c000000),
-                            offset: Offset(0, 15),
-                            blurRadius: 45,
-                            spreadRadius: 0,
-                          ),
-                        ]),
-                        child: FittedBox(
-                            fit: BoxFit.scaleDown,
-                            child: Icon(
-                              Icons.volume_up,
-                              color:
-                                  _isAnswer ? Colors.white : Color(0xff979ba5),
-                              size: 140,
-                            )),
+                  Expanded(
+                    child: Container(),
+                  )
+                ],
+              ),
+              SizedBox(height: 30),
+              Row(
+                children: [
+                  Expanded(
+                    child: Container(),
+                  ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      MaterialButton(
+                        onPressed: () {
+                          setState(() {
+                            _isAnswer = true;
+                          });
+                        },
+                        color: _isAnswer ? Color(0xff878e9f) : Color(0xffe3e6ee),
+                        shape: CircleBorder(),
+                        elevation: 0,
+                        child: Container(
+                          height: 60,
+                          width: 60,
+                          padding: EdgeInsets.all(15),
+                          decoration:
+                              BoxDecoration(shape: BoxShape.circle, boxShadow: [
+                            BoxShadow(
+                              color: Color(0x0c000000),
+                              offset: Offset(0, 15),
+                              blurRadius: 45,
+                              spreadRadius: 0,
+                            ),
+                          ]),
+                          child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Icon(
+                                Icons.volume_up,
+                                color:
+                                    _isAnswer ? Colors.white : Color(0xff979ba5),
+                                size: 140,
+                              )),
+                        ),
                       ),
-                    ),
-                    SizedBox(
-                      height: 18,
-                    ),
-                    SizedBox(
-                        height: 19,
-                        child: FittedBox(
-                          fit: BoxFit.scaleDown,
-                          child: Text(
-                            '답변',
-                            style: TextStyle(
+                      SizedBox(
+                        height: 18,
+                      ),
+                      SizedBox(
+                          height: 19,
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              '답변',
+                              style: TextStyle(
+                                color: _isAnswer
+                                    ? Color(0xff424753)
+                                    : Color(0xff8e99af),
+                                fontSize: 16,
+                                fontFamily: 'AppleSDGothicNeo',
+                              ),
+                            ),
+                          )),
+                    ],
+                  ),
+                  SizedBox(
+                    width: 30,
+                  ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            _isAnswer = false;
+                          });
+                        },
+                        child: Container(
+                          height: 60,
+                          width: 60,
+                          padding: EdgeInsets.all(15),
+                          decoration: BoxDecoration(
+                              shape: BoxShape.circle,
                               color: _isAnswer
-                                  ? Color(0xff424753)
-                                  : Color(0xff8e99af),
-                              fontSize: 16,
+                                  ? Color(0xffe3e6ee)
+                                  : Color(0xff878e9f),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Color(0x0c000000),
+                                  offset: Offset(0, 15),
+                                  blurRadius: 45,
+                                  spreadRadius: 0,
+                                ),
+                              ]),
+                          child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Icon(
+                                Icons.volume_up,
+                                color:
+                                    _isAnswer ? Color(0xff979ba5) : Colors.white,
+                                size: 40,
+                              )),
+                        ),
+                      ),
+                      SizedBox(
+                        height: 18,
+                      ),
+                      SizedBox(
+                          height: 19,
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              '자유',
+                              style: TextStyle(
+                                color: _isAnswer
+                                    ? Color(0xff8e99af)
+                                    : Color(0xff424753),
+                                fontSize: 16,
+                                fontFamily: 'AppleSDGothicNeo',
+                              ),
+                            ),
+                          )),
+                    ],
+                  ),
+                  SizedBox(
+                    width: 20,
+                  )
+                ],
+              ),
+              SizedBox(
+                height: 50,
+              ),
+              Container(
+                  height: 70,
+                  child: _isAnswer
+                      ? FittedBox(
+                          child: Text(
+                            '여자친구에게 서운할때는?',
+                            style: TextStyle(
+                              color: Colors.black.withOpacity(0.8),
+                              fontSize: 30,
                               fontFamily: 'AppleSDGothicNeo',
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        )
+                      : FittedBox(
+                          child: Text(
+                            '2020.09.08 아현이의 속삭임 #1',
+                            maxLines: 3,
+                            style: TextStyle(
+                              color: Colors.black.withOpacity(0.5),
+                              fontSize: 30,
+                              fontFamily: 'AppleSDGothicNeo',
+                              fontWeight: FontWeight.w800,
                             ),
                           ),
                         )),
-                  ],
+              SizedBox(height: 50),
+              Center(
+                child: Container(
+                  width: 190,
+                  height: 190,
+                  decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                          color: Color(0xffffacac).withOpacity(0.5), width: 3)),
+                  child: Stack(
+                    children: [
+                      Center(
+                          child: SizedBox(
+                              width: 175,
+                              child: Divider(
+                                thickness: 1,
+                              ))),
+                      Center(
+                          child: SizedBox(
+                              height: 175,
+                              child: VerticalDivider(
+                                thickness: 1,
+                              ))),
+                      Center(
+                        child: MaterialButton(
+                          splashColor: Color(0xffffacac),
+                          onPressed: _opt,
+                          color: Colors.white,
+                          child: Container(
+                            width: 160,
+                            height: 160,
+                            child: Center(
+                              child: FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  child: Icon(
+                                    _buttonIcon,
+                                    color: Color(0xffffacac),
+                                    size: 80,
+                                  )),
+                            ),
+                          ),
+                          shape: CircleBorder(),
+                          elevation: 0.5,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-                SizedBox(
-                  width: 30,
-                ),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    GestureDetector(
+              ),
+              SizedBox(
+                height: 10,
+              ),
+              SizedBox(
+                height: 50,
+                child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      _recording == null  ?"...": '${_recording.duration.toString().substring(2,7)}',
+                      style: TextStyle(color: Colors.grey.withOpacity(0.5),fontSize: 50),
+                    )),
+              ),
+              SizedBox(
+                height: 40,
+              ),
+              (_recording?.status == RecordingStatus.Stopped)
+                  ? GestureDetector(
                       onTap: () {
                         setState(() {
-                          _isAnswer = false;
+                          _prepare();
                         });
                       },
-                      child: Container(
-                        height: 60,
-                        width: 60,
-                        padding: EdgeInsets.all(15),
-                        decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: _isAnswer
-                                ? Color(0xffe3e6ee)
-                                : Color(0xff878e9f),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Color(0x0c000000),
-                                offset: Offset(0, 15),
-                                blurRadius: 45,
-                                spreadRadius: 0,
-                              ),
-                            ]),
-                        child: FittedBox(
-                            fit: BoxFit.scaleDown,
-                            child: Icon(
-                              Icons.volume_up,
-                              color:
-                                  _isAnswer ? Color(0xff979ba5) : Colors.white,
-                              size: 40,
-                            )),
-                      ),
-                    ),
-                    SizedBox(
-                      height: 18,
-                    ),
-                    SizedBox(
-                        height: 19,
-                        child: FittedBox(
-                          fit: BoxFit.scaleDown,
-                          child: Text(
-                            '자유',
-                            style: TextStyle(
-                              color: _isAnswer
-                                  ? Color(0xff8e99af)
-                                  : Color(0xff424753),
-                              fontSize: 16,
-                              fontFamily: 'AppleSDGothicNeo',
-                            ),
-                          ),
-                        )),
-                  ],
-                ),
-                SizedBox(
-                  width: 20,
-                )
-              ],
-            ),
-            SizedBox(
-              height: 50,
-            ),
-            Container(
-                height: 70,
-                child: _isAnswer
-                    ? FittedBox(
-                        child: Text(
-                          '여자친구에게 서운할때는?',
-                          style: TextStyle(
-                            color: Colors.black.withOpacity(0.8),
-                            fontSize: 30,
-                            fontFamily: 'AppleSDGothicNeo',
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                      )
-                    : FittedBox(
-                        child: Text(
-                          '2020.09.08 아현이의 속삭임 #1',
-                          maxLines: 3,
-                          style: TextStyle(
-                            color: Colors.black.withOpacity(0.5),
-                            fontSize: 30,
-                            fontFamily: 'AppleSDGothicNeo',
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                      )),
-            SizedBox(height: 50),
-            Center(
-              child: Container(
-                width: 190,
-                height: 190,
-                decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                        color: Color(0xffffacac).withOpacity(0.5), width: 3)),
-                child: Stack(
-                  children: [
-                    Center(
-                        child: SizedBox(
-                            width: 175,
-                            child: Divider(
-                              thickness: 1,
-                            ))),
-                    Center(
-                        child: SizedBox(
-                            height: 175,
-                            child: VerticalDivider(
-                              thickness: 1,
-                            ))),
-                    Center(
-                      child: MaterialButton(
-                        splashColor: Color(0xffffacac),
-                        onPressed: _opt,
-                        color: Colors.white,
-                        child: Container(
-                          width: 160,
-                          height: 160,
-                          child: Center(
-                            child: FittedBox(
-                                fit: BoxFit.scaleDown,
-                                child: Icon(
-                                  _buttonIcon,
-                                  color: Color(0xffffacac),
-                                  size: 80,
-                                )),
-                          ),
-                        ),
-                        shape: CircleBorder(),
-                        elevation: 0.5,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            SizedBox(
-              height: 10,
-            ),
-            SizedBox(
-              height: 50,
-              child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: Text(
-                    _recording == null  ?"...": '${_recording.duration.toString().substring(2,7)}',
-                    style: TextStyle(color: Colors.grey.withOpacity(0.5),fontSize: 50),
-                  )),
-            ),
-            SizedBox(
-              height: 40,
-            ),
-            ((_isAnswer && _recording?.status == RecordingStatus.Stopped) ||
-                    (!_isAnswer && !_isFreeEmpty))
-                ? GestureDetector(
-                    onTap: () {
-                      setState(() {
-                        _prepare();
-                      });
-                    },
-                    child: Card(
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10)),
-                      color: Color(0xff80ffacac),
+                      child: Card(
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10)),
+                        color: Color(0xff80ffacac),
 //                      color: Color.fromRGBO(135, 142, 159, 1),
-                      elevation: 8,
-                      shadowColor: Color(0x33000000),
-                      child: Container(
-                        height: 60,
-                        child: Center(
-                            child: Text("다시 녹음",
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 15,
-                                  fontFamily: 'AppleSDGothicNeo',
-                                  fontWeight: FontWeight.w700,
-                                ))),
+                        elevation: 8,
+                        shadowColor: Color(0x33000000),
+                        child: Container(
+                          height: 60,
+                          child: Center(
+                              child: Text("다시 녹음",
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 15,
+                                    fontFamily: 'AppleSDGothicNeo',
+                                    fontWeight: FontWeight.w700,
+                                  ))),
+                        ),
                       ),
+                    )
+                  : Card(
+                      color: Colors.transparent,
+                      child: SizedBox(
+                        height: 60,
+                      ),
+                      elevation: 0,
                     ),
-                  )
-                : Card(
-                    color: Colors.transparent,
-                    child: SizedBox(
-                      height: 60,
-                    ),
-                    elevation: 0,
+              SizedBox(
+                height: 10,
+              ),
+              GestureDetector(
+                onTap: () {
+                  Directory(_recording.path).delete(recursive: true);
+                },
+                child: Card(
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10)),
+                  color: Color(0xffffacac),
+                  elevation: 8,
+                  shadowColor: Color(0x33000000),
+                  child: Container(
+                    height: 60,
+                    child: Center(
+                        child: Text("확인",
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 15,
+                              fontFamily: 'AppleSDGothicNeo',
+                              fontWeight: FontWeight.w700,
+                            ))),
                   ),
-            SizedBox(
-              height: 10,
-            ),
-            GestureDetector(
-              onTap: () {
-                print("${player.state} ㅜㅜㅜㅜㅜㅜㅜㅜㅜㅜㅜㅜㅜㅜㅜㅜㅜㅜㅜㅜㅜㅜㅜㅜㅜㅜㅜㅜㅜㅜㅜㅜㅜㅜㅜㅜㅜㅜㅜㅜㅜㅜㅜㅜㅜㅜㅜㅜㅜㅜㅜㅜㅜㅜ");
-                setState(() {
-                  _isAnswerEmpty = !_isAnswerEmpty;
-                });
-              },
-              child: Card(
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10)),
-                color: Color(0xffffacac),
-                elevation: 8,
-                shadowColor: Color(0x33000000),
-                child: Container(
-                  height: 60,
-                  child: Center(
-                      child: Text("확인",
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 15,
-                            fontFamily: 'AppleSDGothicNeo',
-                            fontWeight: FontWeight.w700,
-                          ))),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
