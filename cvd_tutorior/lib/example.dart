@@ -103,7 +103,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
 
     _recorder = FlutterAudioRecorder(customPath,
-        audioFormat: AudioFormat.WAV, sampleRate: 22050);
+        audioFormat: AudioFormat.AAC, sampleRate: 22050);
     await _recorder.initialized;
   }
 

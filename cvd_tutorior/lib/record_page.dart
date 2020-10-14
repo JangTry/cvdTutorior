@@ -1,6 +1,9 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:math';
+import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'dart:io' as io;
 
 import 'package:flutter_audio_recorder/flutter_audio_recorder.dart';
@@ -14,6 +17,15 @@ class RecordPage extends StatefulWidget {
 
 class _RecordPageState extends State<RecordPage> {
 
+  double _stickWidth=4;
+  double _stickMargin = 4;
+  double _maxHeight = 150;
+  double _minHeight = 10;
+  int counter=0;
+  double _width=384;
+  int stickAmount;
+  List<double> _stickHeights = new List<double>();
+
   FlutterAudioRecorder _recorder;
   AudioPlayer player = AudioPlayer();
   AudioPlayerState playerState = AudioPlayerState.STOPPED;
@@ -25,17 +37,23 @@ class _RecordPageState extends State<RecordPage> {
   bool _isAnswerEmpty = true;
   bool _isFreeEmpty = true;
 
+  List<FlSpot> dataSpot = new List<FlSpot>();
+  List<FlSpot> fakeSpot =
+  new List<FlSpot>.generate(100, (index) => FlSpot(index.toDouble(), 0));
 
   @override
   void initState() {
     super.initState();
-    Future.microtask(() { //제스터 디텍터같은 이벤트큐 생성되기 이전에 준비작업.
+    stickAmount = ((_width - 60) / (_stickWidth+_stickMargin)).toInt();
+    _stickHeights = List<double>.generate(stickAmount, (index) => 10);
+    Future.microtask(() {
+      //제스터 디텍터같은 이벤트큐 생성되기 이전에 준비작업.
       _prepare();
     });
+    dataSpot.add(FlSpot(0, 0));
   }
 
   void _opt() async {
-
     switch (_recording.status) {
       case RecordingStatus.Initialized:
         {
@@ -44,7 +62,28 @@ class _RecordPageState extends State<RecordPage> {
         }
       case RecordingStatus.Recording:
         {
-          await _stopRecording();
+//            _recording.status = RecordingStatus.Paused;
+          await _recorder.pause();
+          _t.cancel();
+          break;
+        }
+      case RecordingStatus.Paused:
+        {
+          await _recorder.resume();
+          _t = Timer.periodic(Duration(milliseconds: 100), (Timer t) async {
+            var current = await _recorder.current();
+            setState(() {
+              _recording = current;
+              if(counter>stickAmount/2){
+                _stickHeights.removeAt(0);
+                _stickHeights.insert((stickAmount/2).toInt(), levelToHeight(current.metering.averagePower));
+              }else {
+                _stickHeights[counter]=levelToHeight(current.metering.averagePower);
+              }
+              _t = t;
+            });
+            counter++;
+          });
           break;
         }
       case RecordingStatus.Stopped:
@@ -61,14 +100,15 @@ class _RecordPageState extends State<RecordPage> {
       default:
         break;
     }
-
-    // 刷新按钮
+    var result = await _recorder.current();
     setState(() {
-      _buttonIcon = _playerIcon(_recording.status,playerState);
+      _recording = result;
+      _buttonIcon = _playerIcon(_recording.status, playerState);
     });
   }
 
-  Future _init() async { //경로설정, 레코더 생성
+  Future _init() async {
+    //경로설정, 레코더 생성
     String customPath = '/flutter_audio_recorder_';
     io.Directory appDocDirectory;
     if (io.Platform.isIOS) {
@@ -80,14 +120,17 @@ class _RecordPageState extends State<RecordPage> {
     // can add extension like ".mp4" ".wav" ".m4a" ".aac"
     customPath = appDocDirectory.path +
         customPath +
-        DateTime.now().millisecondsSinceEpoch.toString();
+        DateTime
+            .now()
+            .millisecondsSinceEpoch
+            .toString() + ".mp4";
 
     // .wav <---> AudioFormat.WAV
     // .mp4 .m4a .aac <---> AudioFormat.AAC
     // AudioFormat is optional, if given value, will overwrite path extension when there is conflicts.
 
     _recorder = FlutterAudioRecorder(customPath,
-        audioFormat: AudioFormat.WAV, sampleRate: 8000);
+        audioFormat: AudioFormat.AAC, sampleRate: 8000);
     await _recorder.initialized;
   }
 
@@ -98,7 +141,7 @@ class _RecordPageState extends State<RecordPage> {
       var result = await _recorder.current();
       setState(() {
         _recording = result;
-        _buttonIcon = _playerIcon(_recording.status,playerState);
+        _buttonIcon = _playerIcon(_recording.status, playerState);
 //        _alert = "";
       });
     } else {
@@ -109,8 +152,8 @@ class _RecordPageState extends State<RecordPage> {
 
     player.onPlayerCompletion.listen((event) {
       setState(() {
-         playerState = player.state;
-         _buttonIcon = _playerIcon(_recording.status, playerState);
+        playerState = player.state;
+        _buttonIcon = _playerIcon(_recording.status, playerState);
       });
     });
 
@@ -122,19 +165,26 @@ class _RecordPageState extends State<RecordPage> {
     });
   }
 
+
   Future _startRecording() async {
     await _recorder.start();
     var current = await _recorder.current();
     setState(() {
       _recording = current;
     });
-
-    _t = Timer.periodic(Duration(milliseconds: 10), (Timer t) async {
+    _t = Timer.periodic(Duration(milliseconds: 100), (Timer t) async {
       var current = await _recorder.current();
       setState(() {
         _recording = current;
+        if(counter>stickAmount/2){
+          _stickHeights.removeAt(0);
+          _stickHeights.insert((stickAmount/2).toInt(), levelToHeight(current.metering.averagePower));
+        }else {
+          _stickHeights[counter]=levelToHeight(current.metering.averagePower);
+        }
         _t = t;
       });
+      counter++;
     });
   }
 
@@ -152,8 +202,9 @@ class _RecordPageState extends State<RecordPage> {
 //    var result = player.play("https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3", isLocal: false);
   }
 
-
-  IconData _playerIcon(RecordingStatus recordStatus, AudioPlayerState playerState) { // 녹음상태와 재생상태를 확인해 적절한 아이콘데이터를 리턴
+  IconData _playerIcon(RecordingStatus recordStatus,
+      AudioPlayerState playerState) {
+    // 녹음상태와 재생상태를 확인해 적절한 아이콘데이터를 리턴
     switch (recordStatus) {
       case RecordingStatus.Initialized:
         {
@@ -161,11 +212,15 @@ class _RecordPageState extends State<RecordPage> {
         }
       case RecordingStatus.Recording:
         {
-          return Icons.stop;
+          return Icons.pause;
         }
       case RecordingStatus.Stopped:
         {
           return checkPlayerState(playerState);
+        }
+      case RecordingStatus.Paused:
+        {
+          return Icons.mic;
         }
       default:
         return Icons.mic;
@@ -175,15 +230,20 @@ class _RecordPageState extends State<RecordPage> {
   IconData checkPlayerState(AudioPlayerState playerState) {
     if (playerState == AudioPlayerState.PLAYING) {
       return Icons.stop;
-    }else {
+    } else {
       return Icons.play_arrow;
     }
   }
-
-
-
+  double levelToHeight(double level){
+    if(level < -30) {
+      return _minHeight;
+    }else{
+      return _maxHeight + level * ((_maxHeight - _minHeight ) -30 ) / 30 ;
+    }
+  }
   @override
   Widget build(BuildContext context) {
+
     return SingleChildScrollView(
       child: SafeArea(
         child: Container(
@@ -219,7 +279,8 @@ class _RecordPageState extends State<RecordPage> {
                             _isAnswer = true;
                           });
                         },
-                        color: _isAnswer ? Color(0xff878e9f) : Color(0xffe3e6ee),
+                        color:
+                        _isAnswer ? Color(0xff878e9f) : Color(0xffe3e6ee),
                         shape: CircleBorder(),
                         elevation: 0,
                         child: Container(
@@ -227,7 +288,7 @@ class _RecordPageState extends State<RecordPage> {
                           width: 60,
                           padding: EdgeInsets.all(15),
                           decoration:
-                              BoxDecoration(shape: BoxShape.circle, boxShadow: [
+                          BoxDecoration(shape: BoxShape.circle, boxShadow: [
                             BoxShadow(
                               color: Color(0x0c000000),
                               offset: Offset(0, 15),
@@ -239,8 +300,9 @@ class _RecordPageState extends State<RecordPage> {
                               fit: BoxFit.scaleDown,
                               child: Icon(
                                 Icons.volume_up,
-                                color:
-                                    _isAnswer ? Colors.white : Color(0xff979ba5),
+                                color: _isAnswer
+                                    ? Colors.white
+                                    : Color(0xff979ba5),
                                 size: 140,
                               )),
                         ),
@@ -298,8 +360,9 @@ class _RecordPageState extends State<RecordPage> {
                               fit: BoxFit.scaleDown,
                               child: Icon(
                                 Icons.volume_up,
-                                color:
-                                    _isAnswer ? Color(0xff979ba5) : Colors.white,
+                                color: _isAnswer
+                                    ? Color(0xff979ba5)
+                                    : Colors.white,
                                 size: 40,
                               )),
                         ),
@@ -330,35 +393,35 @@ class _RecordPageState extends State<RecordPage> {
                 ],
               ),
               SizedBox(
-                height: 50,
+                height: 30,
               ),
               Container(
                   height: 70,
                   child: _isAnswer
                       ? FittedBox(
-                          child: Text(
-                            '여자친구에게 서운할때는?',
-                            style: TextStyle(
-                              color: Colors.black.withOpacity(0.8),
-                              fontSize: 30,
-                              fontFamily: 'AppleSDGothicNeo',
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                        )
+                    child: Text(
+                      '여자친구에게 서운할때는?',
+                      style: TextStyle(
+                        color: Colors.black.withOpacity(0.8),
+                        fontSize: 30,
+                        fontFamily: 'AppleSDGothicNeo',
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  )
                       : FittedBox(
-                          child: Text(
-                            '2020.09.08 아현이의 속삭임 #1',
-                            maxLines: 3,
-                            style: TextStyle(
-                              color: Colors.black.withOpacity(0.5),
-                              fontSize: 30,
-                              fontFamily: 'AppleSDGothicNeo',
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                        )),
-              SizedBox(height: 50),
+                    child: Text(
+                      '2020.09.08 아현이의 속삭임 #1',
+                      maxLines: 3,
+                      style: TextStyle(
+                        color: Colors.black.withOpacity(0.5),
+                        fontSize: 30,
+                        fontFamily: 'AppleSDGothicNeo',
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  )),
+              SizedBox(height: 40),
               Center(
                 child: Container(
                   width: 190,
@@ -415,53 +478,60 @@ class _RecordPageState extends State<RecordPage> {
                 child: FittedBox(
                     fit: BoxFit.scaleDown,
                     child: Text(
-                      _recording == null  ?"...": '${_recording.duration.toString().substring(2,7)}',
-                      style: TextStyle(color: Colors.grey.withOpacity(0.5),fontSize: 50),
+                      _recording == null
+                          ? "..."
+                          : '${_recording.duration.toString().substring(2, 7)}',
+                      style: TextStyle(
+                          color: Colors.grey.withOpacity(0.5), fontSize: 50),
                     )),
               ),
+              recordVisualizer(),
               SizedBox(
                 height: 40,
               ),
               (_recording?.status == RecordingStatus.Stopped)
                   ? GestureDetector(
-                      onTap: () {
-                        setState(() {
-                          _prepare();
-                        });
-                      },
-                      child: Card(
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10)),
-                        color: Color(0xff80ffacac),
+                onTap: () {
+                  setState(() {
+                    _prepare();
+                    _stickHeights = List<double>.generate(stickAmount, (index) => 10);
+                    counter = 0;
+                  });
+                },
+                child: Card(
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10)),
+                  color: Color(0xff80ffacac),
 //                      color: Color.fromRGBO(135, 142, 159, 1),
-                        elevation: 8,
-                        shadowColor: Color(0x33000000),
-                        child: Container(
-                          height: 60,
-                          child: Center(
-                              child: Text("다시 녹음",
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 15,
-                                    fontFamily: 'AppleSDGothicNeo',
-                                    fontWeight: FontWeight.w700,
-                                  ))),
-                        ),
-                      ),
-                    )
+                  elevation: 8,
+                  shadowColor: Color(0x33000000),
+                  child: Container(
+                    height: 60,
+                    child: Center(
+                        child: Text("다시 녹음",
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 15,
+                              fontFamily: 'AppleSDGothicNeo',
+                              fontWeight: FontWeight.w700,
+                            ))),
+                  ),
+                ),
+              )
                   : Card(
-                      color: Colors.transparent,
-                      child: SizedBox(
-                        height: 60,
-                      ),
-                      elevation: 0,
-                    ),
+                color: Colors.transparent,
+                child: SizedBox(
+                  height: 60,
+                ),
+                elevation: 0,
+              ),
               SizedBox(
                 height: 10,
               ),
               GestureDetector(
                 onTap: () {
-                  Directory(_recording.path).delete(recursive: true);
+//                  Directory(_recording.path).delete(recursive: true);
+                  _stopRecording();
                 },
                 child: Card(
                   shape: RoundedRectangleBorder(
@@ -488,11 +558,39 @@ class _RecordPageState extends State<RecordPage> {
       ),
     );
   }
+
+  Widget recordVisualizer() {
+    return Container(
+      child: Row(
+          children: List<Row>.generate(_stickHeights.length, (index) =>
+          Row(
+            children: [
+              Container(
+               width:_stickWidth,
+               height: _stickHeights[index],
+               decoration: BoxDecoration(
+//                 color: (index < (stickAmount/2).toInt())?Color(0xffffacac):Colors.grey.withOpacity(0.2),
+                 color: (counter < stickAmount/2)
+                          ?(index<counter)?Color(0xffffacac):Colors.grey.withOpacity(0.2)
+                          :(index <= stickAmount/2)?Color(0xffffacac):Colors.grey.withOpacity(0.2),
+                 borderRadius: BorderRadius.all(Radius.circular(_stickWidth/2))
+               ),
+              ),
+              SizedBox(width: _stickMargin,height: _maxHeight)
+            ],
+          )
+        )
+      ),
+    );
+  }
+
 }
 
-
 //Todo
-//시작할때 7오류 왜나는지
-//재생주일때 정지로 바뀌기
+
 //답변/자유로 와리가리하기
 //다시녹음하면 파일 지우기
+
+//그래프 중간선, xy 숫자 지우기
+//x축 길이 설정하기
+//오른쪽 끝 남기는게 좋을 것 같은데 어떻게?
